@@ -6,10 +6,48 @@ import {
     getDefaultWallets,
     Theme,
     darkTheme,
+    Chain,
 } from '@rainbow-me/rainbowkit';
 import { chain, configureChains, createClient, WagmiConfig } from 'wagmi';
 import { alchemyProvider } from 'wagmi/providers/alchemy';
 import { publicProvider } from 'wagmi/providers/public';
+import { jsonRpcProvider } from 'wagmi/providers/jsonRpc';
+
+const additionalChains: Chain[] = [
+    {
+        id: 1666700000,
+        name: 'Harmony testnet Shard 0',
+        rpcUrls: { default: 'https://api.s0.b.hmny.io' },
+        network: 'harmony',
+        iconUrl: 'assets/harmony-one-logo.svg',
+        iconBackground: '#fff',
+        nativeCurrency: { name: 'ONE', symbol: 'ONE', decimals: 18 as 18 }, // eslint-disable-line
+        blockExplorers: {
+            default: {
+                name: 'Harmony Block Explorer',
+                url: 'https://explorer.harmony.one',
+            },
+        },
+        testnet: true,
+    },
+    {
+        id: 1666600000,
+        name: 'Harmony mainnet Shard 0',
+        network: 'harmony testnet',
+        iconUrl: 'assets/harmony-one-logo.svg',
+        rpcUrls: { default: 'https://api.harmony.one' },
+        nativeCurrency: { name: 'ONE', symbol: 'ONE', decimals: 18 as 18 }, // eslint-disable-line
+        blockExplorers: {
+            default: {
+                name: 'Harmony Block Explorer',
+                url: 'https://explorer.harmony.one',
+            },
+        },
+        testnet: false,
+    },
+];
+
+const additionalChainIDs = additionalChains.map((c) => c.id);
 
 const { chains, provider, webSocketProvider } = configureChains(
     [
@@ -20,12 +58,20 @@ const { chains, provider, webSocketProvider } = configureChains(
         ...(process.env.NEXT_PUBLIC_ENABLE_TESTNETS === 'true'
             ? [chain.goerli, chain.kovan, chain.rinkeby, chain.ropsten]
             : []),
+        ...additionalChains,
     ],
     [
         alchemyProvider({
             // This is Alchemy's default API key.
             // You can get your own at https://dashboard.alchemyapi.io
             alchemyId: process.env.NEXT_PUBLIC_ALCHEMY_ID,
+        }),
+        jsonRpcProvider({
+            rpc: (chain) => {
+                if (chain.id in additionalChainIDs)
+                    return { http: chain.rpcUrls.default };
+                else return null;
+            },
         }),
         publicProvider(),
     ]
